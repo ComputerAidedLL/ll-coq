@@ -783,9 +783,6 @@ Qed.
 Program Instance provable_pole : fact := {
   fact_set := fun Γ => derivation Γ
 }.
-Next Obligation.
-apply Proper_syntactic_eq_derivation.
-Qed.
 
 Program Let pole : pole := provable_pole.
 Existing Instance pole.
