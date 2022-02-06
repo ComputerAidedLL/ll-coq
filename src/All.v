@@ -2,7 +2,7 @@ From Coq Require Import Lists.List.
 From Coq Require Import Relations.Relations.
 From Coq Require Import Sorting.Sorting.
 From Coq Require Import Classes.Equivalence.
-From Coq Require Import Lia.
+From Coq Require Import Arith.PeanoNat.
 From AAC_tactics Require Import AAC.
 
 Parameter var : Set. (* TODO https://github.com/coq-community/aac-tactics/issues/85 ? *)
@@ -832,12 +832,12 @@ assert (Hcount :
       destruct (φ_eq_dec); [exfalso; intuition congruence|reflexivity]. }
 destruct Hc as [A [Hi HA]].
 assert (H := Hcount _ _ A Heq HA); clear - H Hi.
-assert (Hrw : forall Γ Δ, count_occ φ_eq_dec (Γ ++ Δ) A = count_occ φ_eq_dec Γ A + count_occ φ_eq_dec Δ A).
-  clear; intros Γ Δ; induction Γ as [|B Γ].
-    reflexivity.
-    simpl; destruct φ_eq_dec; rewrite IHΓ; lia.
-simpl in H; rewrite Hrw in H.
-apply -> (count_occ_In φ_eq_dec) in Hi; lia.
+simpl in H; rewrite count_occ_app in H.
+apply -> (count_occ_In φ_eq_dec) in Hi.
+remember (count_occ φ_eq_dec Γ A) as n eqn:Heqn; clear Heqn.
+assert (0 + n < n + n) as Hn by now apply PeanoNat.Nat.add_lt_mono_r.
+simpl in Hn; rewrite H in Hn.
+apply (PeanoNat.Nat.lt_irrefl _ Hn).
 Qed.
 
 Lemma eval_φ_complete : forall A Γ, (eval_φ A) Γ -> derivation (A :: Γ).
