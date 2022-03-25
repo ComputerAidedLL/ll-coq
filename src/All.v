@@ -5,7 +5,7 @@ From Coq Require Import Classes.Equivalence.
 From Coq Require Import Arith.PeanoNat.
 From AAC_tactics Require Import AAC.
 
-Parameter var : Set. (* TODO https://github.com/coq-community/aac-tactics/issues/85 ? *)
+Parameter var : Type.
 
 Axiom var_eq_dec : forall x y : var, {x = y} + {x <> y}.
 
@@ -146,7 +146,7 @@ End Permutation.
 Section Phase_semantics.
 
 Class Monoid := {
-  M : Set; (* TODO https://github.com/coq-community/aac-tactics/issues/85 ? *)
+  M : Type;
   M_eq : M -> M -> Prop;
   Equivalence_M_eq :> Equivalence M_eq;
   M_op : M -> M -> M;
