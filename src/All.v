@@ -148,13 +148,13 @@ Section Phase_semantics.
 Class Monoid := {
   M : Type;
   M_eq : M -> M -> Prop;
-  Equivalence_M_eq :> Equivalence M_eq;
+  Equivalence_M_eq :: Equivalence M_eq;
   M_op : M -> M -> M;
   M_nul : M;
-  Associative_M_op :> Associative M_eq M_op;
-  Commutative_M_op :> Commutative M_eq M_op;
-  Unit_M_op :> Unit M_eq M_op M_nul;
-  Proper_M_op :> Proper (M_eq ==> M_eq ==> M_eq) M_op
+  Associative_M_op :: Associative M_eq M_op;
+  Commutative_M_op :: Commutative M_eq M_op;
+  Unit_M_op :: Unit M_eq M_op M_nul;
+  Proper_M_op :: Proper (M_eq ==> M_eq ==> M_eq) M_op
 }.
 
 Coercion M : Monoid >-> Sortclass.
@@ -171,7 +171,7 @@ Ltac mreplace s t :=
 
 Class fact := {
   fact_set : M -> Prop;
-  fact_compat :> Proper (M_eq ==> iff) fact_set
+  fact_compat :: Proper (M_eq ==> iff) fact_set
 }.
 
 Coercion fact_set : fact >-> Funclass.
