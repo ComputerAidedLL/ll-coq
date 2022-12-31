@@ -218,7 +218,7 @@ intros X x; split; unfold orth; simpl.
   now apply Hz; assumption.
   intros Hx y Hy.
   mreplace (x · y) (y · x); [aac_reflexivity|].
-  apply Hy; now intuition.
+  apply Hy, Hx.
 Qed.
 
 Lemma orth_incl : forall (X : fact) x, X x -> X⌝⌝ x.
@@ -263,7 +263,7 @@ Global Program Instance fact_dsj (X Y : fact) : fact :=
   { fact_set := fun x => X x \/ Y x }.
 Next Obligation.
 apply proper_sym_impl_iff; [now cauto|].
-intros x y Heq H; rewrite <- Heq; now intuition.
+intros x y <-. reflexivity.
 Qed.
 
 Notation "X ∪ Y" := (fact_dsj X Y) (at level 50).
@@ -284,7 +284,7 @@ Qed.
 Global Program Instance fact_nul : fact := { fact_set := fun x => False }.
 Next Obligation.
 apply proper_sym_impl_iff; [now cauto|].
-intros x y Heq; intuition.
+intros x y Heq. reflexivity.
 Qed.
 
 Record fact_bng_set (X : fact) (x : M) : Prop := {
@@ -732,7 +732,8 @@ induction HΓ as [Γ|Γ1 Γ2 Γ3]; intros Δ1 Δ2 HΔ.
   induction HΔ as [Δ|Δ1 Δ2 Δ3].
     now reflexivity.
     transitivity (Γ ++ Δ2); [|assumption].
-    refine (let P := _ in or_ind (P Γ Δ1 Δ2) (_ (P Γ Δ2 Δ1)) H); now intuition.
+    refine (let P := _ in or_ind (P Γ Δ1 Δ2) (_ (P Γ Δ2 Δ1)) H).
+      intros _ Hr. symmetry. apply P, Hr.
     Unshelve. 2:{
     clear; intros Γ Δ1 Δ2 HΔ; induction HΔ as [Δ1 Δ2|Δ].
       now apply rst_step, synrel_prm, Permutation.Permutation_app_head.
@@ -742,7 +743,8 @@ induction HΓ as [Γ|Γ1 Γ2 Γ3]; intros Δ1 Δ2 HΔ.
         now apply rst_step, synrel_ctr.
         now apply rst_step, synrel_prm; apply (Permutation.Permutation_app_comm (? A :: Δ) Γ). }
   transitivity (Γ2 ++ Δ1); [clear - H|apply IHHΓ; eassumption].
-  refine (let P := _ in or_ind (P Γ1 Γ2 Δ1) (_ (P Γ2 Γ1 Δ1)) H); now intuition.
+  refine (let P := _ in or_ind (P Γ1 Γ2 Δ1) (_ (P Γ2 Γ1 Δ1)) H).
+    intros _ Hr. symmetry. apply P, Hr.
   Unshelve.
   clear; intros Γ1 Γ2 Δ HΓ; induction HΓ as [Γ1 Γ2|Γ].
     now apply rst_step, synrel_prm, Permutation.Permutation_app_tail.
@@ -810,12 +812,12 @@ intros Γ Heq.
 assert (Hc : {Δ | Γ = map φ_whn Δ} + {exists A, In A Γ /\ forall B, A <> ? B}).
   clear; induction Γ as [|A Γ].
     left; exists nil; reflexivity.
-    destruct IHΓ as [[Δ HΔ]|H]; [|now right; destruct H as [B HB]; exists B; intuition].
+    destruct IHΓ as [[Δ HΔ]|H]; [|now right; destruct H as [B HB]; exists B; split; [right|]].
     assert (Heq : {B | A = ? B} + {forall B, A <> ? B}).
       now destruct A; intuition (eauto||congruence).
     destruct Heq as [[B HB]|Hr].
       now left; exists (B :: Δ); simpl; congruence.
-      now right; exists A; intuition.
+      now right; exists A; split; [left|].
 destruct Hc as [?|Hc]; [assumption|exfalso].
 assert (Hcount :
   forall Γ Δ A, syntactic_eq Γ Δ -> (forall B, A <> ? B) ->
@@ -824,7 +826,8 @@ assert (Hcount :
   apply clos_rst_rst1n in Heq; induction Heq as [Γ|Γ1 Γ2 Γ3].
     reflexivity.
     etransitivity; [|eassumption].
-    refine (let P := _ in or_ind (P Γ1 Γ2) (_ (P Γ2 Γ1)) H); now intuition.
+    refine (let P := _ in or_ind (P Γ1 Γ2) (_ (P Γ2 Γ1)) H).
+      intros _ Hr. symmetry. apply P, Hr.
     Unshelve. 2:{
     clear - HA; intros Γ1 Γ2 Hr; induction Hr.
       now induction H; simpl; repeat destruct φ_eq_dec; congruence.
@@ -861,7 +864,7 @@ induction A; intros Γ HΓ;
   now rewrite syntactic_eq_cons_app; apply HΓ; intros Δ HΔ; contradiction.
   (* ⊗ *)
   apply HΓ; clear Γ HΓ; intros Ξ [Γ Δ HΓ HΔ H]; rewrite H; clear Ξ H.
-  now simpl; constructor; intuition.
+  now simpl; constructor; auto.
   (* ⅋ *)
   rewrite <- syntactic_eq_cons_app; constructor.
   assert (Hrw : syntactic_eq (A1 :: A2 :: Γ) (Γ ++ A1 :: A2 :: nil)); [|rewrite Hrw; clear Hrw].
@@ -874,14 +877,14 @@ induction A; intros Γ HΓ;
   now constructor; rewrite syntactic_eq_cons_app; apply HΓ; [left|right]; assumption.
   (* ⊕ *)
   apply HΓ; clear Γ HΓ.
-  intros Γ [HΓ|HΓ]; simpl; [apply drv_pls_1|apply drv_pls_2]; intuition.
+  now intros Γ [HΓ|HΓ]; simpl; [apply drv_pls_1|apply drv_pls_2]; auto.
   (* ! *)
   apply HΓ; clear Γ HΓ; intros Γ [HΓ HΓ1 HΓd]; simpl.
   apply syntactic_eq_idempotent in HΓd; destruct HΓd as [Γ' Hrw]; rewrite Hrw.
   now constructor; apply IHA; rewrite <- Hrw; assumption.
   (* ? *)
   apply HΓ; clear Γ HΓ; split.
-    now intros Γ HΓ; simpl; apply drv_drl; intuition.
+    now intros Γ HΓ; simpl; apply drv_drl; auto.
     now intros Γ HΓ; simpl; apply drv_wkn; rewrite <- app_nil_r; apply HΓ; simpl; reflexivity.
     now simpl; apply rst_step, synrel_ctr.
 Qed.
