@@ -2,10 +2,10 @@ From Coq Require Import Lists.List.
 From Coq Require Import Relations.Relations.
 From Coq Require Import Sorting.Sorting.
 From Coq Require Import Classes.Equivalence.
-From Coq Require Import Lia.
+From Coq Require Import Arith.PeanoNat.
 From AAC_tactics Require Import AAC.
 
-Parameter var : Set. (* TODO https://github.com/coq-community/aac-tactics/issues/85 ? *)
+Parameter var : Type.
 
 Axiom var_eq_dec : forall x y : var, {x = y} + {x <> y}.
 
@@ -146,15 +146,15 @@ End Permutation.
 Section Phase_semantics.
 
 Class Monoid := {
-  M : Set; (* TODO https://github.com/coq-community/aac-tactics/issues/85 ? *)
+  M : Type;
   M_eq : M -> M -> Prop;
-  Equivalence_M_eq :> Equivalence M_eq;
+  Equivalence_M_eq :: Equivalence M_eq;
   M_op : M -> M -> M;
   M_nul : M;
-  Associative_M_op :> Associative M_eq M_op;
-  Commutative_M_op :> Commutative M_eq M_op;
-  Unit_M_op :> Unit M_eq M_op M_nul;
-  Proper_M_op :> Proper (M_eq ==> M_eq ==> M_eq) M_op
+  Associative_M_op :: Associative M_eq M_op;
+  Commutative_M_op :: Commutative M_eq M_op;
+  Unit_M_op :: Unit M_eq M_op M_nul;
+  Proper_M_op :: Proper (M_eq ==> M_eq ==> M_eq) M_op
 }.
 
 Coercion M : Monoid >-> Sortclass.
@@ -171,7 +171,7 @@ Ltac mreplace s t :=
 
 Class fact := {
   fact_set : M -> Prop;
-  fact_compat :> Proper (M_eq ==> iff) fact_set
+  fact_compat :: Proper (M_eq ==> iff) fact_set
 }.
 
 Coercion fact_set : fact >-> Funclass.
@@ -218,7 +218,7 @@ intros X x; split; unfold orth; simpl.
   now apply Hz; assumption.
   intros Hx y Hy.
   mreplace (x · y) (y · x); [aac_reflexivity|].
-  apply Hy; now intuition.
+  apply Hy, Hx.
 Qed.
 
 Lemma orth_incl : forall (X : fact) x, X x -> X⌝⌝ x.
@@ -263,7 +263,7 @@ Global Program Instance fact_dsj (X Y : fact) : fact :=
   { fact_set := fun x => X x \/ Y x }.
 Next Obligation.
 apply proper_sym_impl_iff; [now cauto|].
-intros x y Heq H; rewrite <- Heq; now intuition.
+intros x y <-. reflexivity.
 Qed.
 
 Notation "X ∪ Y" := (fact_dsj X Y) (at level 50).
@@ -284,7 +284,7 @@ Qed.
 Global Program Instance fact_nul : fact := { fact_set := fun x => False }.
 Next Obligation.
 apply proper_sym_impl_iff; [now cauto|].
-intros x y Heq; intuition.
+intros x y Heq. reflexivity.
 Qed.
 
 Record fact_bng_set (X : fact) (x : M) : Prop := {
@@ -732,7 +732,8 @@ induction HΓ as [Γ|Γ1 Γ2 Γ3]; intros Δ1 Δ2 HΔ.
   induction HΔ as [Δ|Δ1 Δ2 Δ3].
     now reflexivity.
     transitivity (Γ ++ Δ2); [|assumption].
-    refine (let P := _ in or_ind (P Γ Δ1 Δ2) (_ (P Γ Δ2 Δ1)) H); now intuition.
+    refine (let P := _ in or_ind (P Γ Δ1 Δ2) (_ (P Γ Δ2 Δ1)) H).
+      intros _ Hr. symmetry. apply P, Hr.
     Unshelve. 2:{
     clear; intros Γ Δ1 Δ2 HΔ; induction HΔ as [Δ1 Δ2|Δ].
       now apply rst_step, synrel_prm, Permutation.Permutation_app_head.
@@ -742,7 +743,8 @@ induction HΓ as [Γ|Γ1 Γ2 Γ3]; intros Δ1 Δ2 HΔ.
         now apply rst_step, synrel_ctr.
         now apply rst_step, synrel_prm; apply (Permutation.Permutation_app_comm (? A :: Δ) Γ). }
   transitivity (Γ2 ++ Δ1); [clear - H|apply IHHΓ; eassumption].
-  refine (let P := _ in or_ind (P Γ1 Γ2 Δ1) (_ (P Γ2 Γ1 Δ1)) H); now intuition.
+  refine (let P := _ in or_ind (P Γ1 Γ2 Δ1) (_ (P Γ2 Γ1 Δ1)) H).
+    intros _ Hr. symmetry. apply P, Hr.
   Unshelve.
   clear; intros Γ1 Γ2 Δ HΓ; induction HΓ as [Γ1 Γ2|Γ].
     now apply rst_step, synrel_prm, Permutation.Permutation_app_tail.
@@ -783,9 +785,6 @@ Qed.
 Program Instance provable_pole : fact := {
   fact_set := fun Γ => derivation Γ
 }.
-Next Obligation.
-apply Proper_syntactic_eq_derivation.
-Qed.
 
 Program Let pole : pole := provable_pole.
 Existing Instance pole.
@@ -813,12 +812,12 @@ intros Γ Heq.
 assert (Hc : {Δ | Γ = map φ_whn Δ} + {exists A, In A Γ /\ forall B, A <> ? B}).
   clear; induction Γ as [|A Γ].
     left; exists nil; reflexivity.
-    destruct IHΓ as [[Δ HΔ]|H]; [|now right; destruct H as [B HB]; exists B; intuition].
+    destruct IHΓ as [[Δ HΔ]|H]; [|now right; destruct H as [B HB]; exists B; split; [right|]].
     assert (Heq : {B | A = ? B} + {forall B, A <> ? B}).
       now destruct A; intuition (eauto||congruence).
     destruct Heq as [[B HB]|Hr].
       now left; exists (B :: Δ); simpl; congruence.
-      now right; exists A; intuition.
+      now right; exists A; split; [left|].
 destruct Hc as [?|Hc]; [assumption|exfalso].
 assert (Hcount :
   forall Γ Δ A, syntactic_eq Γ Δ -> (forall B, A <> ? B) ->
@@ -827,7 +826,8 @@ assert (Hcount :
   apply clos_rst_rst1n in Heq; induction Heq as [Γ|Γ1 Γ2 Γ3].
     reflexivity.
     etransitivity; [|eassumption].
-    refine (let P := _ in or_ind (P Γ1 Γ2) (_ (P Γ2 Γ1)) H); now intuition.
+    refine (let P := _ in or_ind (P Γ1 Γ2) (_ (P Γ2 Γ1)) H).
+      intros _ Hr. symmetry. apply P, Hr.
     Unshelve. 2:{
     clear - HA; intros Γ1 Γ2 Hr; induction Hr.
       now induction H; simpl; repeat destruct φ_eq_dec; congruence.
@@ -835,12 +835,12 @@ assert (Hcount :
       destruct (φ_eq_dec); [exfalso; intuition congruence|reflexivity]. }
 destruct Hc as [A [Hi HA]].
 assert (H := Hcount _ _ A Heq HA); clear - H Hi.
-assert (Hrw : forall Γ Δ, count_occ φ_eq_dec (Γ ++ Δ) A = count_occ φ_eq_dec Γ A + count_occ φ_eq_dec Δ A).
-  clear; intros Γ Δ; induction Γ as [|B Γ].
-    reflexivity.
-    simpl; destruct φ_eq_dec; rewrite IHΓ; lia.
-simpl in H; rewrite Hrw in H.
-apply -> (count_occ_In φ_eq_dec) in Hi; lia.
+simpl in H; rewrite count_occ_app in H.
+apply -> (count_occ_In φ_eq_dec) in Hi.
+remember (count_occ φ_eq_dec Γ A) as n eqn:Heqn; clear Heqn.
+assert (0 + n < n + n) as Hn by now apply PeanoNat.Nat.add_lt_mono_r.
+simpl in Hn; rewrite H in Hn.
+apply (PeanoNat.Nat.lt_irrefl _ Hn).
 Qed.
 
 Lemma eval_φ_complete : forall A Γ, (eval_φ A) Γ -> derivation (A :: Γ).
@@ -864,7 +864,7 @@ induction A; intros Γ HΓ;
   now rewrite syntactic_eq_cons_app; apply HΓ; intros Δ HΔ; contradiction.
   (* ⊗ *)
   apply HΓ; clear Γ HΓ; intros Ξ [Γ Δ HΓ HΔ H]; rewrite H; clear Ξ H.
-  now simpl; constructor; intuition.
+  now simpl; constructor; auto.
   (* ⅋ *)
   rewrite <- syntactic_eq_cons_app; constructor.
   assert (Hrw : syntactic_eq (A1 :: A2 :: Γ) (Γ ++ A1 :: A2 :: nil)); [|rewrite Hrw; clear Hrw].
@@ -877,14 +877,14 @@ induction A; intros Γ HΓ;
   now constructor; rewrite syntactic_eq_cons_app; apply HΓ; [left|right]; assumption.
   (* ⊕ *)
   apply HΓ; clear Γ HΓ.
-  intros Γ [HΓ|HΓ]; simpl; [apply drv_pls_1|apply drv_pls_2]; intuition.
+  now intros Γ [HΓ|HΓ]; simpl; [apply drv_pls_1|apply drv_pls_2]; auto.
   (* ! *)
   apply HΓ; clear Γ HΓ; intros Γ [HΓ HΓ1 HΓd]; simpl.
   apply syntactic_eq_idempotent in HΓd; destruct HΓd as [Γ' Hrw]; rewrite Hrw.
   now constructor; apply IHA; rewrite <- Hrw; assumption.
   (* ? *)
   apply HΓ; clear Γ HΓ; split.
-    now intros Γ HΓ; simpl; apply drv_drl; intuition.
+    now intros Γ HΓ; simpl; apply drv_drl; auto.
     now intros Γ HΓ; simpl; apply drv_wkn; rewrite <- app_nil_r; apply HΓ; simpl; reflexivity.
     now simpl; apply rst_step, synrel_ctr.
 Qed.
